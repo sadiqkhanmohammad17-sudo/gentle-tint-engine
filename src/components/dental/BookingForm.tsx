@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { User, Phone, Send, Loader2, MessageCircle, CalendarCheck, Clock, Mic, MicOff } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
 interface DateOption {
