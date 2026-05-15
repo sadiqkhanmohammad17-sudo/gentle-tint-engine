@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import { User, Phone, Send, Loader2, MessageCircle, CalendarCheck, Clock, Mic, MicOff } from "lucide-react";
 import { useState, useMemo, useRef, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 
 interface DateOption {
@@ -145,44 +144,10 @@ const BookingForm = () => {
     if (errors.phone) setErrors((p) => ({ ...p, phone: validatePhone(v) }));
   };
 
-  // Fetch booked slots for selected date without exposing patient details.
+  // Booked-slot tracking removed (no backend). All slots shown as available.
   useEffect(() => {
-    if (!selectedDateKey) return;
-    let cancelled = false;
-    setLoadingSlots(true);
-
-    const buildSet = (rows: any[] | null) =>
-      new Set<string>((rows ?? []).map((r: any) => `${selectedDateKey}|${r.appointment_time}`));
-
-    (async () => {
-      // Try RPC first (privacy-safe)
-      const rpcRes = await supabase.rpc("get_booked_slots", { _appointment_date: selectedDateKey });
-      if (cancelled) return;
-
-      if (!rpcRes.error) {
-        setBookedSlots(buildSet(rpcRes.data as any[]));
-        setLoadingSlots(false);
-        return;
-      }
-
-      // Fallback: direct table read (works if SELECT policy allows anon)
-      const tblRes = await supabase
-        .from("appointments")
-        .select("appointment_time")
-        .eq("appointment_date", selectedDateKey);
-      if (cancelled) return;
-
-      if (tblRes.error) {
-        console.error("Error fetching booked slots:", rpcRes.error, tblRes.error);
-        setBookedSlots(new Set());
-      } else {
-        setBookedSlots(buildSet(tblRes.data as any[]));
-      }
-      setLoadingSlots(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
+    setLoadingSlots(false);
+    setBookedSlots(new Set());
   }, [selectedDateKey]);
 
   const handleDateSelect = (key: string) => {
@@ -208,35 +173,7 @@ const BookingForm = () => {
 
     setIsLoading(true);
 
-    // Insert into Supabase to BLOCK this slot
-    const { error: insertError } = await supabase.from("appointments").insert({
-      patient_name: name.trim(),
-      phone,
-      appointment_date: selectedDateKey,
-      appointment_time: selectedTime,
-    });
 
-    if (insertError) {
-      setIsLoading(false);
-      // Unique constraint violation = slot just got booked
-      if (insertError.code === "23505") {
-        toast({
-          title: "Slot just got booked!",
-          description: "Sorry, someone booked this slot. Please pick another time.",
-          variant: "destructive",
-        });
-        // Refresh booked slots
-        setBookedSlots((prev) => new Set(prev).add(`${selectedDateKey}|${selectedTime}`));
-        setSelectedTime("");
-      } else {
-        toast({
-          title: "Booking failed",
-          description: insertError.message,
-          variant: "destructive",
-        });
-      }
-      return;
-    }
 
     const selected = dateOptions.find((d) => d.key === selectedDateKey)!;
     const dateStr = selected.date.toLocaleDateString("en-IN", {
