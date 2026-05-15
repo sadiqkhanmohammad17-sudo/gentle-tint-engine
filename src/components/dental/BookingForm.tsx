@@ -173,35 +173,7 @@ const BookingForm = () => {
 
     setIsLoading(true);
 
-    // Insert into Supabase to BLOCK this slot
-    const { error: insertError } = await supabase.from("appointments").insert({
-      patient_name: name.trim(),
-      phone,
-      appointment_date: selectedDateKey,
-      appointment_time: selectedTime,
-    });
 
-    if (insertError) {
-      setIsLoading(false);
-      // Unique constraint violation = slot just got booked
-      if (insertError.code === "23505") {
-        toast({
-          title: "Slot just got booked!",
-          description: "Sorry, someone booked this slot. Please pick another time.",
-          variant: "destructive",
-        });
-        // Refresh booked slots
-        setBookedSlots((prev) => new Set(prev).add(`${selectedDateKey}|${selectedTime}`));
-        setSelectedTime("");
-      } else {
-        toast({
-          title: "Booking failed",
-          description: insertError.message,
-          variant: "destructive",
-        });
-      }
-      return;
-    }
 
     const selected = dateOptions.find((d) => d.key === selectedDateKey)!;
     const dateStr = selected.date.toLocaleDateString("en-IN", {
